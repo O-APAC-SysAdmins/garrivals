@@ -192,14 +192,12 @@ func main() {
 
 	driveService, err := initDriveService(*configPath)
 	if err != nil {
-		fmt.Errorf("failed to create drive service: %w", err)
-		return
+		log.Fatalf("failed to create drive service: %v", err)
 	}
 
 	xlsxData, err := downloadSheet(driveService, *savePath, *inMemory)
 	if err != nil {
-		fmt.Errorf("failed to download file: %w", err)
-		return
+		log.Fatalf("failed to download file: %v", err)
 	}
 	fmt.Fprintf(os.Stderr, "Successfully downloaded file: %s\n", spreadsheetId)
 	processArrivals(*savePath, xlsxData, *sheet, *targetLocation, *inMemory)
