@@ -9,6 +9,7 @@ Simply run: `go build`.
 ## Usage
 
 ```
+$ ./arrivals -h
 Usage of ./arrivals:
   -config string
         path to config files (credentials.json, token.json)
@@ -16,6 +17,8 @@ Usage of ./arrivals:
         filter new users from location (default "Hong Kong")
   -memory
         process the xlsx file in memory
+  -offline string
+        process the pointed xlsx file
   -output string
         filepath to export downloaded file (default "arrivals.xlsx")
   -sheet string
