@@ -84,11 +84,7 @@ func saveToken(path string, token *oauth2.Token) {
 
 // setup the drive service using oauth token
 func initDriveService(configPath string) (*drive.Service, error) {
-	var (
-		err error
-		ctx = context.Background()
-	)
-
+	var err error
 	if configPath == "" {
 		configPath, err = os.UserConfigDir()
 		if err != nil {
@@ -112,7 +108,7 @@ func initDriveService(configPath string) (*drive.Service, error) {
 	}
 	client := getClient(config, configPath)
 
-	return drive.NewService(ctx, option.WithHTTPClient(client))
+	return drive.NewService(context.Background(), option.WithHTTPClient(client))
 }
 
 /* Sheet file handling (download, parsing) */
