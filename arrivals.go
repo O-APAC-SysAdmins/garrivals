@@ -11,11 +11,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/xuri/excelize/v2"
-
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
@@ -119,43 +117,37 @@ func initDriveService(configPath string) (*drive.Service, error) {
 
 /* Sheet file handling (download, parsing) */
 
-func downloadSheet(driveService *drive.Service, outputPath string, inMemory bool) (string, error) {
+func downloadSheet(driveService *drive.Service, outputPath string) ([]byte, error) {
 	resp, err := driveService.Files.Export(spreadsheetId, mimeType).Download()
 	if err != nil {
-		return "", fmt.Errorf("failed to export file: %w", err)
+		return nil, fmt.Errorf("failed to export file: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if inMemory {
-		var sheet bytes.Buffer
-		io.Copy(&sheet, resp.Body)
-		return sheet.String(), nil
-	} else {
-		out, err := os.Create(outputPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to create local file: %w", err)
-		}
-		defer out.Close()
-		_, err = io.Copy(out, resp.Body)
-		if err != nil {
-			return "", fmt.Errorf("failed to write to file: %w", err)
-		}
+	var sheet bytes.Buffer
+	_, err = io.Copy(&sheet, resp.Body)
+	return sheet.Bytes(), err
+}
+
+func saveSheetToDisk(path string, sheet []byte) error {
+	out, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create local file: %w", err)
 	}
-	return "", nil
+	defer out.Close()
+
+	_, err = io.Copy(out, bytes.NewReader(sheet))
+	if err != nil {
+		return fmt.Errorf("failed to write to file: %w", err)
+	}
+	return nil
 }
 
 // display new employees arrivals
-// will use filePath or xlsxData depending of inMemory
-func processArrivals(filePath, xlsxData, sheet, targetLocation string, inMemory bool) error {
-	var (
-		today = time.Now()
-		f     *excelize.File
-		err   error
-	)
-	if inMemory {
-		f, err = excelize.OpenReader(strings.NewReader(xlsxData))
-	} else {
-		f, err = excelize.OpenFile(filePath)
+func processArrivals(xlsxData []byte, sheet, targetLocation string) error {
+	f, err := excelize.OpenReader(bytes.NewReader(xlsxData))
+	if err != nil {
+		return err
 	}
 	defer f.Close()
 
@@ -164,6 +156,7 @@ func processArrivals(filePath, xlsxData, sheet, targetLocation string, inMemory 
 		return err
 	}
 
+	today := time.Now()
 	fmt.Printf("%-25s | %-10s | %-50s | %s\n", "Name", "Date", "Function", "Gram")
 	for i, row := range rows {
 		if i == 0 || i == 1 || len(row) < 8 {
@@ -183,6 +176,7 @@ func processArrivals(filePath, xlsxData, sheet, targetLocation string, inMemory 
 func main() {
 	var (
 		savePath       = flag.String("output", "arrivals.xlsx", "filepath to export downloaded file")
+		offline        = flag.String("offline", "", "process the pointed xlsx file")
 		sheet          = flag.String("sheet", "New colleagues 2026", "sheet's name to parse")
 		targetLocation = flag.String("location", "Hong Kong", "filter new users from location")
 		inMemory       = flag.Bool("memory", false, "process the xlsx file in memory")
@@ -190,15 +184,33 @@ func main() {
 	)
 	flag.Parse()
 
+	if *offline != "" {
+		xlsxData, err := os.ReadFile(*offline)
+		if err != nil {
+			log.Fatalf("failed to open offline xlsx file: %v", err)
+		}
+		processArrivals(xlsxData, *sheet, *targetLocation)
+		return
+	}
+
 	driveService, err := initDriveService(*configPath)
 	if err != nil {
 		log.Fatalf("failed to create drive service: %v", err)
 	}
 
-	xlsxData, err := downloadSheet(driveService, *savePath, *inMemory)
+	log.Print("Download sheet from Google Drive...")
+	xlsxData, err := downloadSheet(driveService, *savePath)
 	if err != nil {
 		log.Fatalf("failed to download file: %v", err)
 	}
-	fmt.Fprintf(os.Stderr, "Successfully downloaded file: %s\n", spreadsheetId)
-	processArrivals(*savePath, xlsxData, *sheet, *targetLocation, *inMemory)
+	log.Printf("Successfully downloaded file: %s", spreadsheetId)
+
+	if !*inMemory {
+		err = saveSheetToDisk(*savePath, xlsxData)
+		if err != nil {
+			log.Fatalf("failed to save xlsx file to disk: %v", err)
+		}
+		log.Printf("Successfully saved xlsx file to disk: %s", spreadsheetId)
+	}
+	processArrivals(xlsxData, *sheet, *targetLocation)
 }
