@@ -116,8 +116,6 @@ func resolveConfigPath(flagValue string) string {
 }
 
 func initDriveService(configPath string) (*drive.Service, error) {
-	ctx := context.Background()
-
 	configPath = resolveConfigPath(configPath)
 	if err := os.MkdirAll(configPath, os.ModePerm); err != nil {
 		fatalf("unable to create config directory: %v", err)
@@ -134,7 +132,7 @@ func initDriveService(configPath string) (*drive.Service, error) {
 	}
 	client := getClient(config, configPath)
 
-	return drive.NewService(ctx, option.WithHTTPClient(client))
+	return drive.NewService(context.Background(), option.WithHTTPClient(client))
 }
 
 /* Sheet file handling */
