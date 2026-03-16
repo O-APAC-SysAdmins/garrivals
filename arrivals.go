@@ -197,12 +197,16 @@ func parseArrivals(xlsxData []byte, sheet, targetLocation string) ([]arrival, er
 	today := time.Now()
 	var results []arrival
 	for i, row := range rows {
-		if i < 2 || len(row) < 8 {
+		if i < 2 || len(row) < 7 {
 			continue
 		}
 
 		name := row[0] + " " + row[1]
-		date, function, where, gram := row[4], row[5], row[6], row[7]
+		date, function, where := row[4], row[5], row[6]
+		gram := ""
+		if len(row) > 7 {
+			gram = row[7]
+		}
 		arrivalDate, _ := time.Parse("2006-01-02", date)
 
 		if where == targetLocation && arrivalDate.After(today) {
