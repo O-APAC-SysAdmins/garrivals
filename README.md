@@ -12,21 +12,52 @@ Simply run: `go build`.
 $ ./arrivals -h
 Usage of ./arrivals:
   -config string
-        path to config files (credentials.json, token.json)
+        path to config dir (default: $GARRIVALS_CONFIG_PATH or ~/.config/odooArrivals)
+  -force-download
+        download even if local file is still fresh
+  -format string
+        output format: table or csv (default "table")
   -location string
-        filter new users from location (default "Hong Kong")
+        filter arrivals by location (default "Hong Kong")
   -memory
-        process the xlsx file in memory
+        process xlsx in memory without saving to disk
   -offline string
-        process the pointed xlsx file
+        process a local xlsx file instead of downloading
   -output string
         filepath to export downloaded file (default "arrivals.xlsx")
   -sheet string
-        sheet's name to parse (default "New colleagues 2026")
+        sheet name to parse (default "New colleagues 2026")
+  -v    verbose output
 ```
 
-The default `config` path is the result from `os.UserConfigDir()` and `odooArrivals`.  
-On Linux the default config path would be: `~/.config/odooArrivals/`.
+The config path is resolved in this order:
+1. `--config` flag
+2. `GARRIVALS_CONFIG_PATH` environment variable
+3. `os.UserConfigDir()` + `odooArrivals` (Linux: `~/.config/odooArrivals/`)
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Error |
+| `2` | No upcoming arrivals found |
+
+### Examples
+
+```bash
+# Default: download sheet, filter Hong Kong, print table
+./arrivals
+
+# Use a local file, output as CSV
+./arrivals --offline arrivals.xlsx --format csv
+
+# Force re-download, verbose
+./arrivals --force-download -v
+
+# Different location
+./arrivals --location "Indonesia"
+```
 
 ## First Time
 
