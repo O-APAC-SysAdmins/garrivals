@@ -153,17 +153,19 @@ func processArrivals(xlsxData []byte, sheet, targetLocation string) error {
 	}
 
 	today := time.Now()
-	fmt.Printf("%-25s | %-10s | %-50s | %s\n", "Name", "Date", "Function", "Gram")
+	fmt.Printf("%-25s | %-10s | %-55s | %s\n", "Name", "Date", "Function", "Gram")
 	for i, row := range rows {
-		if i == 0 || i == 1 || len(row) < 8 {
+		if i == 0 || i == 1 || len(row) < 7 {
 			continue
 		}
 
-		name, date, function, where, gram := row[0]+" "+row[1], row[4], row[5], row[6], row[7]
+		name, date, function, where := row[0]+" "+row[1], row[4], row[5], row[6]
+		gram := "to be defined"
+		if (len(row) > 7) { gram = row[7] }
 		arrivalDate, _ := time.Parse("2006-01-02", date)
 
 		if where == targetLocation && arrivalDate.After(today) {
-			fmt.Printf("%-25s | %10s | %-50s | %s\n", name, date, function, gram)
+			fmt.Printf("%-25s | %10s | %-55s | %s\n", name, date, function, gram)
 		}
 	}
 	return nil
@@ -176,7 +178,7 @@ func main() {
 		sheet          = flag.String("sheet", "New colleagues 2026", "sheet's name to parse")
 		targetLocation = flag.String("location", "Hong Kong", "filter new users from location")
 		inMemory       = flag.Bool("memory", false, "process the xlsx file in memory")
-		configPath     = flag.String("config", "", "path to config files (credentials.json, token.json)")
+		configPath     = flag.String("confdir", "", "path to config directory (credentials.json, token.json)")
 	)
 	flag.Parse()
 
@@ -206,7 +208,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to save xlsx file to disk: %v", err)
 		}
-		log.Printf("Successfully saved xlsx file to disk: %s", spreadsheetId)
+		log.Printf("Successfully saved xlsx file to disk: %s", *savePath)
 	}
 	processArrivals(xlsxData, *sheet, *targetLocation)
 }
